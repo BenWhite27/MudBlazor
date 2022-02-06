@@ -12,8 +12,17 @@
 
 	@ChildContent
 
+	@{
+		bool first = true;
+	}
 	@foreach (var item in GetItems())
 	{
+		@if(first)
+		{
+			first = false;
+			<div style="background-color:blue; height:10px;"
+				 @ondrop="(()=>HandleDropBefore(item))" />
+		}
 		<MudDynamicDropItem @key="@(item.GetHashCode())" T="T" DraggingClass="@GetItemDraggingClass()"
 						Item="item"
 						OnDragStarted="DragOperationStarted"
@@ -28,5 +37,7 @@
 			@renderer(item)
 
 		</MudDynamicDropItem>
+		<div style="background-color:blue; height:10px;"
+			 @ondrop="(()=>HandleDropAfter(item))" />
 	}
 </div>

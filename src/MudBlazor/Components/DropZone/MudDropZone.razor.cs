@@ -124,6 +124,7 @@ namespace MudBlazor
             return (Container?.Items ?? Array.Empty<T>()).Where(predicate).ToArray();
         }
 
+
         private RenderFragment<T> GetItemTemplate() => ItemRenderer ?? Container?.ItemRenderer;
 
         private string GetDragginClass()
@@ -268,6 +269,50 @@ namespace MudBlazor
             }
 
             await Container.CommitTransaction(Identifier);
+        }
+        private async Task HandleDropBefore(T item)
+        {
+            var (context, isValidZone) = ItemCanBeDropped();
+            if (context == null)
+            {
+                return;
+            }
+
+            _itemOnDropZone = false;
+
+            if (isValidZone == false)
+            {
+                await Container.CancelTransaction();
+                return;
+            }
+
+            int? desiredIndex = Container?.GetItemIndex(item);
+
+            await Container.CommitTransaction(Identifier, desiredIndex);
+        }
+        private async Task HandleDropAfter(T item)
+        {
+            var (context, isValidZone) = ItemCanBeDropped();
+            if (context == null)
+            {
+                return;
+            }
+
+            _itemOnDropZone = false;
+
+            if (isValidZone == false)
+            {
+                await Container.CancelTransaction();
+                return;
+            }
+
+            int? desiredIndex = Container?.GetItemIndex(item);
+            if (desiredIndex.HasValue)
+            {
+                desiredIndex++;
+            }
+
+            await Container.CommitTransaction(Identifier, desiredIndex);
         }
 
         private void FinishedDragOperation() => _dragInProgress = false;

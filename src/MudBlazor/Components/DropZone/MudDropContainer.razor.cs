@@ -66,7 +66,8 @@ namespace MudBlazor
     /// <typeparam name="T">Type of dragged item</typeparam>
     /// <param name="Item">The dragged item during the transaction</param>
     /// <param name="DropzoneIdentifier">Identifier of the zone where the transaction started</param>
-    public record MudItemDropInfo<T>(T Item, string DropzoneIdentifier);
+    /// <param name="DesiredIndex">The desired index of the item used to re-order items</param>
+    public record MudItemDropInfo<T>(T Item, string DropzoneIdentifier, int? DesiredIndex);
 
     /// <summary>
     /// The container of a drag and drop zones
@@ -74,6 +75,7 @@ namespace MudBlazor
     /// <typeparam name="T">Datetype of items</typeparam>
     public partial class MudDropContainer<T> : MudComponentBase
     {
+        private IList<T> _cachedList;
         private MudDragAndDropItemTransaction<T> _transaction;
 
         protected string Classname =>
@@ -93,7 +95,19 @@ namespace MudBlazor
         /// </summary>
         [Parameter]
         [Category(CategoryTypes.DropZone.Items)]
-        public IEnumerable<T> Items { get; set; }
+        public IEnumerable<T> Items
+        {
+            get => _cachedList;
+            set
+            {
+                if (value != null && value is IList<T> list)
+                    _cachedList = list;
+                else if (value != null)
+                    _cachedList = value.ToList();
+                else
+                    _cachedList = null;
+            }
+        }
 
         /// <summary>
         /// The render fragment (template) that should be used to render the items within a drop zone
@@ -187,10 +201,10 @@ namespace MudBlazor
         public bool TransactionInProgress() => _transaction != null;
         public string GetTransactionOrignZoneIdentiifer() => _transaction?.SourceZoneIdentifier ?? string.Empty;
 
-        public async Task CommitTransaction(string dropzoneIdentifier)
+        public async Task CommitTransaction(string dropzoneIdentifier, int? desiredIndex = null)
         {
             await _transaction.Commit();
-            await ItemDropped.InvokeAsync(new MudItemDropInfo<T>(_transaction.Item, dropzoneIdentifier));
+            await ItemDropped.InvokeAsync(new MudItemDropInfo<T>(_transaction.Item, dropzoneIdentifier, desiredIndex));
             TransactionEnded?.Invoke(this, EventArgs.Empty);
             _transaction = null;
         }
@@ -206,5 +220,16 @@ namespace MudBlazor
         /// Refreshes the dropzone and all items within. This is neded in case of adding items to the collection or changed values of items
         /// </summary>
         public void Refresh() => RefreshRequested?.Invoke(this, EventArgs.Empty);
+
+        /// <summary>
+        /// Gets the index of the specified item within the overall collection
+        /// </summary>
+        /// <returns>The index or null if the item isn't found.</returns>
+        public int? GetItemIndex(T item)
+        {
+            int? index = _cachedList?.IndexOf(item);
+            if (index.HasValue && index == -1) index = null;
+            return index;
+        }
     }
 }
